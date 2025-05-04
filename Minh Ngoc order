@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reorder Quiz Test</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend&display=swap" rel="stylesheet">
+  <script type="module">
+    // Firebase SDK Imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getDatabase, ref, set, get, child, remove } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDaXfpCZPjTFPYlp-qyblg385lkOgQ-dY8",
+      authDomain: "reorder-final.firebaseapp.com",
+      databaseURL: "https://reorder-final-default-rtdb.firebaseio.com",
+      projectId: "reorder-final",
+      storageBucket: "reorder-final.firebasestorage.app",
+      messagingSenderId: "819245266482",
+      appId: "1:819245266482:web:07793c152ece0ba32f2e2b",
+      measurementId: "G-VY6GL9TKQY"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Save Question to Firebase
+    function saveQuestions() {
+      const questionText = document.getElementById('new-question').value.trim();
+      const answersText = document.getElementById('new-answers').value.trim().split('\n');
+
+      if (questionText && answersText.length > 1) {
+        const newQuestionRef = ref(db, 'questions/' + Date.now());  // Use timestamp as unique ID
+        set(newQuestionRef, {
+          question: questionText,
+          answers: answersText
+        }).then(() => {
+          alert('Câu hỏi đã được lưu!');
+          loadQuestions(); // Reload questions
+        }).catch((error) => {
+          console.error('Lỗi khi lưu câu hỏi:', error);
+        });
+      }
+    }
+
+    // Load Questions from Firebase
+    function loadQuestions() {
+      const questionsRef = ref(db, 'questions');
+      get(questionsRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          const questions = snapshot.val();
+          renderHistory(questions);
+        } else {
+          console.log("Không có câu hỏi nào trong cơ sở dữ liệu.");
+        }
+      }).catch((error) => {
+        console.error('Lỗi khi lấy dữ liệu câu hỏi:', error);
+      });
+    }
+
+    // Render Questions
+    function renderHistory(questions) {
+      const container = document.getElementById('question-history');
+      container.innerHTML = '';
+      Object.keys(questions).forEach((key) => {
+        const q = questions[key];
+        const block = document.createElement('div');
+        block.className = 'question-block';
+        block.innerHTML = `
+          <strong>${q.question}</strong>
+          <ul>${q.answers.map(a => `<li>${a}</li>`).join('')}</ul>
+          <div class="history-controls">
+            <button onclick="deleteQuestion('${key}')">Delete</button>
+          </div>
+        `;
+        container.appendChild(block);
+      });
+    }
+
+    // Delete Question from Firebase
+    function deleteQuestion(questionId) {
+      const questionRef = ref(db, 'questions/' + questionId);
+      remove(questionRef)
+        .then(() => {
+          alert('Câu hỏi đã được xóa!');
+          loadQuestions(); // Reload questions after deletion
+        })
+        .catch((error) => {
+          console.error('Lỗi khi xóa câu hỏi:', error);
+        });
+    }
+
+    // Load questions on page load
+    window.onload = loadQuestions;
+  </script>
+
+  <style>
+    body {
+      font-family: 'Lexend', sans-serif;
+      margin: 40px;
+      background: #e6f0ff;
+      color: #333;
+    }
+    h2 {
+      color: #0066cc;
+    }
+    textarea, input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.1);
+    }
+    button {
+      background: #0066cc;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      padding: 12px 20px;
+      font-size: 14px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    button:hover {
+      background: #004d99;
+    }
+    button:active {
+      background: #003366;
+    }
+    .question-block, .incorrect-block {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 20px;
+      background: #ffffff;
+      border-radius: 12px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 10px;
+      background: #cce0ff;
+      border: 1px solid #99c2ff;
+      margin: 5px 0;
+      cursor: move;
+      border-radius: 10px;
+      transition: background 0.2s;
+    }
+    li:hover {
+      background: #b3d1ff;
+    }
+    .hidden {
+      display: none;
+    }
+    .history-controls button {
+      margin-right: 5px;
+    }
+    .correct {
+      background-color: #c8f7c5;
+    }
+    .incorrect {
+      background-color: #f7c5c5;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Create a Reorder Test</h2>
+<div>
+  <label>Question:</label>
+  <input type="text" id="new-question" placeholder="Enter your question">
+
+  <label>Answers (in correct order, one per line):</label>
+  <textarea id="new-answers" rows="4" placeholder="Step 1\nStep 2\nStep 3"></textarea>
+
+  <button onclick="saveQuestions()">Add Question</button>
+</div>
+
+<hr>
+
+<h2>Saved Questions <button onclick="toggleHistory()">Show/Hide</button></h2>
+<div id="question-history" class="hidden"></div>
+
+<hr>
+
+<h2>Try One Random Quiz</h2>
+<button onclick="startSingleQuiz()">Start One Random Question</button>
+<div id="quiz-area"></div>
+<p id="final-result"></p>
+<div id="correct-answer" class="hidden"></div>
+
+<hr>
+
+<h2>Incorrect Attempts <button onclick="toggleIncorrect()">Show/Hide</button></h2>
+<div id="incorrect-history" class="hidden"></div>
+
+<script>
+  function toggleHistory() {
+    const el = document.getElementById('question-history');
+    el.classList.toggle('hidden');
+  }
+
+  function toggleIncorrect() {
+    const el = document.getElementById('incorrect-history');
+    el.classList.toggle('hidden');
+  }
+
+  function startSingleQuiz() {
+    alert('Start your quiz!');
+  }
+</script>
+
+</body>
+</html>
